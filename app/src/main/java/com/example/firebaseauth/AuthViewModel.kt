@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -23,12 +24,36 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    // ← Thêm userRole
+    private val _userRole = MutableStateFlow("")  // ← đổi "user" thành ""
+    val userRole: StateFlow<String> = _userRole.asStateFlow()
+
+    init {
+        // Load role khi app khởi động nếu đã đăng nhập
+        if (repo.getCurrentUser() != null) {
+            loadUserRole()
+        }
+    }
+
+    private fun loadUserRole() {
+        viewModelScope.launch {
+            _userRole.value = repo.getUserRole()
+        }
+    }
+
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = repo.login(email, password)
-            _authState.value = if (result.isSuccess) AuthState.Success
-            else AuthState.Error(result.exceptionOrNull()?.message ?: "Đăng nhập thất bại!")
+            if (result.isSuccess) {
+                loadUserRole()  // Load role trước
+                delay(500)      // ← chờ 500ms để load xong
+                _authState.value = AuthState.Success
+            } else {
+                _authState.value = AuthState.Error(
+                    result.exceptionOrNull()?.message ?: "Đăng nhập thất bại!"
+                )
+            }
         }
     }
 
@@ -36,14 +61,21 @@ class AuthViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             val result = repo.register(email, password)
-            _authState.value = if (result.isSuccess) AuthState.Success
-            else AuthState.Error(result.exceptionOrNull()?.message ?: "Đăng ký thất bại!")
+            if (result.isSuccess) {
+                _userRole.value = "user"  // ← Mới đăng ký luôn là user
+                _authState.value = AuthState.Success
+            } else {
+                _authState.value = AuthState.Error(
+                    result.exceptionOrNull()?.message ?: "Đăng ký thất bại!"
+                )
+            }
         }
     }
 
     fun logout() {
         repo.logout()
         _authState.value = AuthState.Idle
+        _userRole.value = ""  // ← đổi "user" thành ""
     }
 
     fun resetState() {

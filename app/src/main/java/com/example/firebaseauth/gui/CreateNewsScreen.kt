@@ -156,11 +156,14 @@ fun CreateNewsScreen(
                             tieuDe = title,
                             noiDung = content,
                             hinhAnh = selectedImages.firstOrNull()?.toString() ?: "",
-                            danhMucId = catIdInt
+                            danhMucId = catIdInt,
+                            docId = ""  // Firestore tự tạo
                         )
                     )
-                    Toast.makeText(context, "Tạo bài viết thành công", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Tạo bài viết thành công!", Toast.LENGTH_SHORT).show()
                     title = ""; content = ""; categoryId = ""; selectedImages = emptyList()
+                } else {
+                    Toast.makeText(context, "Vui lòng nhập đủ thông tin!", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -214,7 +217,9 @@ fun CreateNewsScreen(
                             )
                         }
 
-                        IconButton(onClick = { viewModel.deleteTinTuc(newsItem) }) {
+                        IconButton(onClick = {
+                            viewModel.deleteTinTuc(newsItem.docId)
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Xóa",

@@ -18,5 +18,6 @@ data class TinTuc(
     val tieuDe: String = "",
     val noiDung: String = "",
     val hinhAnh: String = "",
-    val danhMucId: Int = 0
+    val danhMucId: Int = 0,
+    val docId: String = ""  // ← thêm docId Firestore
 )

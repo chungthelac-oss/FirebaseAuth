@@ -37,8 +37,15 @@ class DetailActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Lấy dữ liệu sản phẩm từ Intent
+            // Lấy data - hỗ trợ cả Product và TinTuc
             val pro = intent.getParcelableExtra<Product>("keypro")
+
+            // Lấy data TinTuc từ Intent
+            val tieuDe = intent.getStringExtra("tieuDe") ?: ""
+            val noiDung = intent.getStringExtra("noiDung") ?: ""
+            val hinhAnh = intent.getStringExtra("hinhAnh") ?: ""
+            val danhMuc = intent.getStringExtra("danhMuc") ?: ""
+
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -56,51 +63,71 @@ class DetailActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .verticalScroll(rememberScrollState()) // Cho phép cuộn nếu nội dung dài
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    // 1. Hình ảnh lớn ở trên cùng (Full Width)
-                    AsyncImage(
-                        model = pro?.hinh,
-                        contentDescription = pro?.tenpro,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        // 2. Mã tin tức (Nhỏ, mờ)
-                        Text(
-                            text = "Mã tin: ${pro?.mapro}",
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                    if (pro != null) {
+                        // Hiển thị tin hardcode
+                        AsyncImage(
+                            model = pro.hinh,
+                            contentDescription = pro.tenpro,
+                            modifier = Modifier.fillMaxWidth().height(250.dp),
+                            contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // 3. Tiêu đề tin tức (Lớn, đậm)
-                        Text(
-                            text = pro?.tenpro ?: "Không có tiêu đề",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 28.sp
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = "Mã tin: ${pro.mapro}", fontSize = 14.sp, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = pro.tenpro,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 28.sp
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Năm: ${pro.year}",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF1B5E20)
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                            Text(
+                                text = "Nội dung chi tiết của bản tin sẽ được cập nhật tại đây. " +
+                                        "Đây là phần mô tả chi tiết cho tin tức '${pro.tenpro}'.",
+                                fontSize = 16.sp,
+                                color = Color.DarkGray,
+                                textAlign = TextAlign.Justify
+                            )
+                        }
+                    } else {
+                        // Hiển thị tin từ Firestore
+                        AsyncImage(
+                            model = hinhAnh.toIntOrNull() ?: R.drawable.vn,
+                            contentDescription = tieuDe,
+                            modifier = Modifier.fillMaxWidth().height(250.dp),
+                            contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        // 4. Giá hoặc thông tin bổ sung
-                        Text(
-                            text = "Năm: ${pro?.year}",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF1B5E20) // Màu xanh lá đậm
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                        // 5. Nội dung giả lập (Cho giống VNExpress)
-                        Text(
-                            text = "Nội dung chi tiết của bản tin sẽ được cập nhật tại đây. " +
-                                    "Đây là phần mô tả chi tiết cho tin tức '${pro?.tenpro}'. " +
-                                    "Ứng dụng đang hiển thị thông tin đầy đủ về sản phẩm/tin tức bạn đã chọn từ danh sách.",
-                            fontSize = 16.sp,
-                            color = Color.DarkGray,
-                            textAlign = TextAlign.Justify
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Danh mục: $danhMuc",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = tieuDe,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 28.sp
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                            Text(
+                                text = noiDung.ifEmpty { "Không có nội dung chi tiết." },
+                                fontSize = 16.sp,
+                                color = Color.DarkGray,
+                                textAlign = TextAlign.Justify
+                            )
+                        }
                     }
                 }
             }
