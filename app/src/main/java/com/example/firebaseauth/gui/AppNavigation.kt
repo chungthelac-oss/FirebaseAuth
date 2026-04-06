@@ -1,9 +1,12 @@
 package com.example.firebaseauth.gui
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -13,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -33,8 +37,8 @@ fun AppNavigation() {
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val userRole by authViewModel.userRole.collectAsState()
+    val isRoleLoaded by authViewModel.isRoleLoaded.collectAsState()
 
-    // ← Kiểm tra đã đăng nhập chưa
     val startDestination = if (authViewModel.isLoggedIn()) "news_home" else "login"
 
     Scaffold(
@@ -50,42 +54,56 @@ fun AppNavigation() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = startDestination,  // ← dùng startDestination động
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable("login") { LoginScreen(navController) }
+            composable("login") { LoginScreen(navController = navController, authViewModel = authViewModel) }
             composable("Register") { CreateFormRegister(navController) }
             composable("news_home") { NewsMainScreen(navController) }
             composable("create_news") {
-                // Chờ role load xong mới kiểm tra
-                if (userRole == "admin") {
-                    CreateNewsScreen(navController)
-                } else if (userRole == "user") {
-                    // Chỉ redirect khi đã load xong và xác nhận là user
-                    LaunchedEffect(Unit) {
-                        navController.navigate("news_home") {
-                            popUpTo("create_news") { inclusive = true }
+                when {
+                    !isRoleLoaded -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    userRole == "admin" -> CreateNewsScreen(navController)
+                    else -> {
+                        LaunchedEffect(Unit) {
+                            navController.navigate("news_home") {
+                                popUpTo("create_news") { inclusive = true }
+                            }
                         }
                     }
                 }
-                // Nếu userRole = "" (đang loading) thì không làm gì cả
             }
-
             composable("classroom") {
-                if (userRole == "admin") {
-                    DanhMucScreen(navController)
-                } else if (userRole == "user") {
-                    LaunchedEffect(Unit) {
-                        navController.navigate("news_home") {
-                            popUpTo("classroom") { inclusive = true }
+                when {
+                    !isRoleLoaded -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    userRole == "admin" -> DanhMucScreen(navController = navController, authViewModel = authViewModel)
+                    else -> {
+                        LaunchedEffect(Unit) {
+                            navController.navigate("news_home") {
+                                popUpTo("classroom") { inclusive = true }
+                            }
                         }
                     }
                 }
             }
-
         }
     }
 }
+
 @Composable
 fun BottomNavigationBar(
     navController: NavHostController,
@@ -96,7 +114,6 @@ fun BottomNavigationBar(
         containerColor = Color.White,
         tonalElevation = 8.dp
     ) {
-        // Tab Trang chủ - tất cả đều thấy
         NavigationBarItem(
             selected = currentRoute == "news_home",
             onClick = {
@@ -110,7 +127,6 @@ fun BottomNavigationBar(
             icon = { Icon(Icons.Filled.Home, contentDescription = "Home") }
         )
 
-        // Tab Tạo tin và Danh mục - CHỈ admin mới thấy
         if (userRole == "admin") {
             NavigationBarItem(
                 selected = currentRoute == "create_news",
@@ -135,4 +151,3 @@ fun BottomNavigationBar(
         }
     }
 }
-

@@ -39,12 +39,13 @@ class AuthRepository {
 
     // Lấy role của user hiện tại
     suspend fun getUserRole(): String {
+        val uid = auth.currentUser?.uid ?: return "user" // Nếu không có uid, mặc định là user
         return try {
-            val uid = auth.currentUser?.uid ?: return "user"
-            val doc = db.collection("users").document(uid).get().await()
-            doc.getString("role") ?: "user"
+            // Lệnh .await() sẽ bắt app đợi cho đến khi lấy xong dữ liệu từ Firestore
+            val document = db.collection("users").document(uid).get().await()
+            document.getString("role") ?: "user"
         } catch (e: Exception) {
-            "user"
+            "user" // Nếu lỗi mạng hoặc không tìm thấy, mặc định cho làm user
         }
     }
 

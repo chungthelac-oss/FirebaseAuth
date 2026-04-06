@@ -24,32 +24,44 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    // ← Thêm userRole
-    private val _userRole = MutableStateFlow("")  // ← đổi "user" thành ""
+    private val _userRole = MutableStateFlow("")
     val userRole: StateFlow<String> = _userRole.asStateFlow()
 
+    private val _isRoleLoaded = MutableStateFlow(false)
+    val isRoleLoaded: StateFlow<Boolean> = _isRoleLoaded.asStateFlow()
+
     init {
-        // Load role khi app khởi động nếu đã đăng nhập
         if (repo.getCurrentUser() != null) {
-            loadUserRole()
+            // Đã đăng nhập → load role ngay
+            viewModelScope.launch {
+                _userRole.value = repo.getUserRole()
+                _isRoleLoaded.value = true
+            }
+        } else {
+            // Chưa đăng nhập → không cần load role
+            _isRoleLoaded.value = true
         }
     }
 
     private fun loadUserRole() {
         viewModelScope.launch {
             _userRole.value = repo.getUserRole()
+            _isRoleLoaded.value = true
         }
     }
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
+            _isRoleLoaded.value = false  // ← reset ngay khi bắt đầu login
+            _userRole.value = ""         // ← xóa role cũ
             val result = repo.login(email, password)
             if (result.isSuccess) {
-                loadUserRole()  // Load role trước
-                delay(500)      // ← chờ 500ms để load xong
+                _userRole.value = repo.getUserRole()  // load role mới
+                _isRoleLoaded.value = true
                 _authState.value = AuthState.Success
             } else {
+                _isRoleLoaded.value = true  // ← set true kể cả khi lỗi
                 _authState.value = AuthState.Error(
                     result.exceptionOrNull()?.message ?: "Đăng nhập thất bại!"
                 )
@@ -62,7 +74,8 @@ class AuthViewModel @Inject constructor() : ViewModel() {
             _authState.value = AuthState.Loading
             val result = repo.register(email, password)
             if (result.isSuccess) {
-                _userRole.value = "user"  // ← Mới đăng ký luôn là user
+                _userRole.value = "user"
+                _isRoleLoaded.value = true
                 _authState.value = AuthState.Success
             } else {
                 _authState.value = AuthState.Error(
@@ -75,7 +88,8 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     fun logout() {
         repo.logout()
         _authState.value = AuthState.Idle
-        _userRole.value = ""  // ← đổi "user" thành ""
+        _userRole.value = ""
+        _isRoleLoaded.value = false
     }
 
     fun resetState() {

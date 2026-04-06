@@ -39,21 +39,31 @@ import androidx.navigation.NavController
 import com.example.firebaseauth.AuthViewModel
 import com.example.firebaseauth.AuthState
 @Composable
-fun LoginScreen(navController: NavController) {
-    val authViewModel: AuthViewModel = hiltViewModel()
+fun LoginScreen(navController: NavController,authViewModel: AuthViewModel) {
+    /*val authViewModel: AuthViewModel = hiltViewModel()*/
+
+    // Lấy các state từ ViewModel
     val authState by authViewModel.authState.collectAsState()
+    val userRole by authViewModel.userRole.collectAsState()
+    val isRoleLoaded by authViewModel.isRoleLoaded.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    LaunchedEffect(authState) {
+    // Bắt buộc phải lắng nghe cả authState VÀ isRoleLoaded
+    LaunchedEffect(authState, isRoleLoaded) {
         when (authState) {
             is AuthState.Success -> {
-                authViewModel.resetState()
-                navController.navigate("news_home") {
-                    popUpTo("login") { inclusive = true }
+                // Chỉ chuyển trang khi ĐÃ LẤY XONG QUYỀN
+                if (isRoleLoaded) {
+                    authViewModel.resetState() // Reset để tránh lỗi khi quay lại
+                    // Mọi tài khoản (cả admin và user) đều điều hướng về "news_home"
+                    // Việc ẩn hiện các nút chức năng của Admin đã được AppNavigation lo
+                    navController.navigate("news_home") {
+                        popUpTo("login") { inclusive = true }
+                    }
                 }
             }
             is AuthState.Error -> {
